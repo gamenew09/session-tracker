@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Session Tracker Times</title>
+
+    <style>
+        table, th, td {
+            border-collapse: collapse;
+            padding-right: 1em;
+            padding: 1em 1em 1em 0;
+            font-size: 18px;
+            text-align: center;
+        }
+        th {
+            border-bottom: 2px solid white;
+        }
+        td {
+            border-bottom: 1px solid white;
+        }
+
+        .not-in-session {
+            color: rgb(125,125,125);
+        }
+    </style>
+</head>
+<body>
+    <table>
+        <thead>
+            <tr>
+                <th>Folder Name</th>
+                <th>Time this Session</th>
+                <th>Time Total Recorded</th>
+            </tr>
+        </thead>
+        <tbody id="listings">
+
+        </tbody>
+    </table>
+
+    <script>
+        const listings_dom = document.getElementById("listings");
+
+        // From https://stackoverflow.com/a/23453651
+        function sanitizeString(str){
+            str = str.replace(/[^a-z0-9áéíóúñü \.,_-]/gim,"");
+            return str.trim();
+        }
+
+        // From https://stackoverflow.com/a/19700358
+        function msToTime(duration) {
+            let seconds = Math.floor((duration / 1000) % 60),
+            minutes = Math.floor((duration / (1000 * 60)) % 60),
+            hours = Math.floor((duration / (1000 * 60 * 60)) % 24),
+            days = Math.floor((duration / (1000 * 60 * 60)) / 24);
+
+            hours = (hours < 10) ? "0" + hours : hours;
+            minutes = (minutes < 10) ? "0" + minutes : minutes;
+            seconds = (seconds < 10) ? "0" + seconds : seconds;
+            days = (days > 0 ? ((days < 10) ? "0" + days : days) : "");
+
+            return days + ((days === "") ? "" : ":") + hours + ":" + minutes + ":" + seconds;
+        }
+
+        window.addEventListener("message", (e) => {
+            const message = e.data;
+            console.log("Recieved message");
+            console.log(message);
+            if(message.command === "update_listings")
+            {
+                while (listings_dom.firstChild) { listings_dom.removeChild(listings_dom.firstChild); }
+
+                message.listings.forEach(listing => {
+                    let row_ele = document.createElement("tr");
+
+                    if(listing.session_time == undefined)
+                    {
+                        row_ele.classList.add("not-in-session");
+                    }
+                    else
+                    {
+                        row_ele.classList.remove("not-in-session");
+                    }
+
+                    let name_ele = document.createElement("td");
+                    name_ele.appendChild(document.createTextNode(sanitizeString(listing.name)));
+                    let session_time_ele = document.createElement("td");
+                    session_time_ele.appendChild(document.createTextNode(listing.session_time == undefined ? "--:--:--" : msToTime(listing.session_time)));
+                    let total_time_ele = document.createElement("td");
+                    total_time_ele.appendChild(document.createTextNode(msToTime(listing.total_time)));
+
+                    row_ele.appendChild(name_ele);
+                    row_ele.appendChild(session_time_ele);
+                    row_ele.appendChild(total_time_ele);
+
+                    listings_dom.appendChild(row_ele);
+                });
+
+                if(message.listings.length == 0)
+                {
+                    var row_ele = document.createElement("tr");
+                    var no_timers = document.createElement("tr");
+                    no_timers.setAttribute("colspan", 2);
+                    no_timers.appendChild(document.createTextNode("There are no stopwatches."));
+                    listings_dom.appendChild(row_ele);
+                }
+            }
+        })
+    </script>
+</body>
+</html>

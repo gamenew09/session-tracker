@@ -11,14 +11,27 @@
         "Other"
     ],
     "activationEvents": [
-        "onCommand:extension.sayHello"
+        "*"
     ],
     "main": "./out/extension",
     "contributes": {
         "commands": [
             {
-                "command": "extension.sayHello",
-                "title": "Hello World"
+                "command": "sessiontracker.showTrackedTimes",
+                "title": "Session Tracker: Show Session Tracker Times"
+            }
+        ],
+        "configuration":[
+            {
+                "type": "object",
+                "title": "Stopwatch Behavior",
+                "properties": {
+                    "sessiontracker.stopwatch.changebasedonfocus": {
+                        "type": "boolean",
+                        "default": false,
+                        "description": "Pause the stopwatch if the workspace window is not focused."
+                    }
+                }
             }
         ]
     },
@@ -34,5 +47,8 @@
         "vscode": "^1.1.6",
         "@types/node": "^7.0.43",
         "@types/mocha": "^2.2.42"
+    },
+    "dependencies": {
+        "ts-stopwatch": "0.0.4"
     }
 }
