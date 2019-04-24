@@ -23,6 +23,11 @@ let stopwatches: StopwatchMap = {};
 let paused: boolean = false;
 let timerStateStatusBar: vscode.StatusBarItem;
 
+function updateStatusBarText()
+{
+    timerStateStatusBar.text = paused? "Not Tracking Time" : "Tracking Time";
+}
+
 function pauseStopwatches()
 {
     paused = true;
@@ -30,7 +35,7 @@ function pauseStopwatches()
         stopwatches[key].stop();
     });
     console.log("Paused stopwatches");
-    timerStateStatusBar.text = "Not Tracking Time";
+    updateStatusBarText();
 }
 
 function resumeStopwatches()
@@ -40,7 +45,7 @@ function resumeStopwatches()
         stopwatches[key].start();
     });
     console.log("Started stopwatches");
-    timerStateStatusBar.text = "Tracking Time";
+    updateStatusBarText();
 }
 
 let lastLoadedJson: JsonEditable = {};
@@ -240,6 +245,8 @@ export function activate(context: vscode.ExtensionContext) {
             vscode.window.showInformationMessage("Paused Time Tracking");
         }
     }));
+
+    updateStatusBarText();
 }
 
 function getSessionTrackerDataViewHtml(): string
