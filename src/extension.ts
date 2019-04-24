@@ -276,13 +276,6 @@ export function activate(context: vscode.ExtensionContext) {
                 pauseStopwatches();
             }
         }
-        else
-        {
-            if(paused)
-            {
-                resumeStopwatches();
-            }
-        }
     }));
 
     context.subscriptions.push(vscode.workspace.onDidChangeWorkspaceFolders((event) => {

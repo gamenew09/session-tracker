@@ -10,7 +10,7 @@ This extension contributes the following settings:
 
 ## Known Issues
 
- - Pausing one code window's tracking and then switching to another window that has the auto-start feature enabled, causes all windows to start tracking time.
+> No known issues at the moment, hopefully no more will pop up in the future.
 
 ## Release Notes
 
