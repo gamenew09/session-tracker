@@ -175,6 +175,7 @@ export function activate(context: vscode.ExtensionContext) {
         {
             currentPanel = vscode.window.createWebviewPanel("sessionTrackerDataView", "Session Tracker Times", vscode.ViewColumn.One, {
                 enableScripts: true,
+                enableFindWidget: true
             });
             currentPanel.webview.html = getSessionTrackerDataViewHtml();
 
