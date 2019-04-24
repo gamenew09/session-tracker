@@ -221,7 +221,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 function getSessionTrackerDataViewHtml(): string
 {
-    return fs.readFileSync(path.normalize(extensionPath + "/src/session-tracker-data.html"), "utf8");
+    return fs.readFileSync(path.normalize(extensionPath + "/html/session-tracker-data.html"), "utf8");
 }
 
 // this method is called when your extension is deactivated
