@@ -23,6 +23,10 @@
         .not-in-session {
             color: rgb(125,125,125);
         }
+
+        .timer-stopped {
+            color: rgb(200, 0, 0);
+        }
     </style>
 </head>
 <body>
@@ -81,6 +85,15 @@
                     else
                     {
                         row_ele.classList.remove("not-in-session");
+                    }
+
+                    if(listing.paused)
+                    {
+                        row_ele.classList.add("timer-stoped");
+                    }
+                    else
+                    {
+                        row_ele.classList.remove("timer-stopped");
                     }
 
                     let name_ele = document.createElement("td");

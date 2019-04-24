@@ -4,6 +4,9 @@ Initial release!
 
 - Added tracking time!
 - Added a webview that shows session times along with all saved times. Activate it with the command: `sessiontracker.showTrackedTimes` (Displayed as: `Session Tracker: Show Session Tracker Times`)
+    - The webview shows any active timers in the window as white text, along with the time in the current session and the total time.
+    - If the text is grey, then it means that the folder is either inactive or not apart of the current window.
+    - If the text is red, then that means the timer is stopped.
 - Added a command that toggles the state of tracking time: `sessiontracker.toggleStopwatches`  (Displayed as: `Session Tracker: Toggle Tracking Times`)
 - Added a status bar button that does the same as the above command. Shown in the bottom-right and shows if the window is tracking time or not.
 - Added a configuration property that determines if the time that is not spent focused on the window is counted toward session time: `sessiontracker.stopwatch.changebasedonfocus`

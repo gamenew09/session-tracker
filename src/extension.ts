@@ -174,7 +174,7 @@ let timeAmountUpdateHandle: NodeJS.Timer;
 
 function autoActivateTimer()
 {
-    if(vscode.workspace.getConfiguration().get("sessiontracker.stopwatch_behavior.autostarttimer"))
+    if(vscode.workspace.getConfiguration().get<boolean>("sessiontracker.stopwatch_behavior.autostarttimer"))
     {
         if(paused)
         {
@@ -357,6 +357,7 @@ export function activate(context: vscode.ExtensionContext) {
                             name: lastLoadedJson[key].display_name, 
                             session_time: undefined,
                             total_time: lastLoadedJson[key].total_time,
+                            paused: false
                         };
                     });
 
@@ -367,6 +368,7 @@ export function activate(context: vscode.ExtensionContext) {
                                 name: vscode.workspace.getWorkspaceFolder(vscode.Uri.parse(key)).name, 
                                 session_time: stopwatches[key].getTime(),
                                 total_time: (lastLoadedJson[key] === undefined ? 0 : lastLoadedJson[key].total_time) + stopwatches[key].getTime(),
+                                paused: paused
                             }
                         }).concat(nonRunningListings)
                     });
