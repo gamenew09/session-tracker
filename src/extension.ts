@@ -23,29 +23,43 @@ let stopwatches: StopwatchMap = {};
 let paused: boolean = false;
 let timerStateStatusBar: vscode.StatusBarItem;
 
-function updateStatusBarText()
+function updateTimerStateStatusBarText()
 {
-    timerStateStatusBar.text = paused? "Not Tracking Time" : "Tracking Time";
+    timerStateStatusBar.text = paused ? "Not Tracking Time" : "Tracking Time";
+    if(vscode.workspace.getConfiguration().get<boolean>("sessiontracker.stopwatch_statusbar.showtrackingtimeitem"))
+    {
+        timerStateStatusBar.show();
+    }
+    else
+    {
+        timerStateStatusBar.hide();
+    }
 }
 
 function pauseStopwatches()
 {
-    paused = true;
-    Object.keys(stopwatches).forEach(key => {
-        stopwatches[key].stop();
-    });
-    console.log("Paused stopwatches");
-    updateStatusBarText();
+    if(!paused)
+    {
+        paused = true;
+        Object.keys(stopwatches).forEach(key => {
+            stopwatches[key].stop();
+        });
+        console.log("Paused stopwatches");
+        updateTimerStateStatusBarText();
+    }
 }
 
 function resumeStopwatches()
 {
-    paused = false;
-    Object.keys(stopwatches).forEach(key => {
-        stopwatches[key].start();
-    });
-    console.log("Started stopwatches");
-    updateStatusBarText();
+    if(paused)
+    {
+        paused = false;
+        Object.keys(stopwatches).forEach(key => {
+            stopwatches[key].start();
+        });
+        console.log("Started stopwatches");
+        updateTimerStateStatusBarText();
+    }
 }
 
 let lastLoadedJson: JsonEditable = {};
@@ -102,17 +116,132 @@ function endStopwatch(index: string)
     console.log(`Stopped stopwatch for "${index}".`);
 }
 
+function hasStopwatch(workspaceFolder: vscode.WorkspaceFolder): boolean
+{
+    if(workspaceFolder === undefined)
+    {
+        return false;
+    }
+
+    return stopwatches[workspaceFolder.uri.toString()] !== undefined;
+}
+
+function isTextDocumentAssociatedWithStopwatch(textDocument: vscode.TextDocument): boolean
+{
+    if(textDocument === undefined)
+    {
+        return false;
+    }
+
+    return hasStopwatch(vscode.workspace.getWorkspaceFolder(textDocument.uri));
+}
+
 let extensionPath: string = "";
+
+let timeAmountStatusItem: vscode.StatusBarItem;
+
+function msToDisplayTime(duration: number): string {
+    let seconds = Math.floor((duration / 1000) % 60),
+    minutes = Math.floor((duration / (1000 * 60)) % 60),
+    hours = Math.floor((duration / (1000 * 60 * 60)) % 24),
+    days = Math.floor((duration / (1000 * 60 * 60)) / 24);
+
+    let hours_str = (hours < 10) ? "0" + hours : hours,
+    minutes_str = (minutes < 10) ? "0" + minutes : minutes,
+    seconds_str = (seconds < 10) ? "0" + seconds : seconds,
+    days_str = (days > 0 ? ((days < 10) ? "0" + days : days) : "");
+
+    return days_str + ((days_str === "") ? "" : ":") + hours_str + ":" + minutes_str + ":" + seconds_str;
+}
+
+let lastActiveWorkspaceFolder: vscode.WorkspaceFolder;
+let showTimeAmount: boolean = true;
+
+function updateTimeAmountStatusItem()
+{
+    if(lastActiveWorkspaceFolder !== undefined && vscode.workspace.getConfiguration().get<boolean>("sessiontracker.stopwatch_statusbar.showfolderworktime"))
+    {
+        timeAmountStatusItem.text = msToDisplayTime(stopwatches[lastActiveWorkspaceFolder.uri.toString()].getTime());
+        timeAmountStatusItem.show();
+    }
+    else
+    {
+        timeAmountStatusItem.hide();
+    }
+}
+
+let timeAmountUpdateHandle: NodeJS.Timer;
+
+function autoActivateTimer()
+{
+    if(vscode.workspace.getConfiguration().get("sessiontracker.stopwatch_behavior.autostarttimer"))
+    {
+        if(paused)
+        {
+            vscode.window.showInformationMessage("Automatically started time tracking.", "Disable Auto-Start for this Workspace", "Disable Auto-Start Globally").then((val) => {
+                if(val === "Disable Auto-Start for this Workspace")
+                {
+                    vscode.workspace.getConfiguration().update("sessiontracker.stopwatch_behavior.autostarttimer", false, vscode.ConfigurationTarget.Workspace).then(() => {
+                        vscode.window.showInformationMessage("Disabled auto-start time tracking for this workspace.");
+                    });
+                }
+                else if(val === "Disable Auto-Start Globally")
+                {
+                    vscode.workspace.getConfiguration().update("sessiontracker.stopwatch_behavior.autostarttimer", false, vscode.ConfigurationTarget.Global).then(() => {
+                        vscode.window.showInformationMessage("Disabled auto-start time tracking globally.");
+                    });
+                }
+            })
+        }
+        resumeStopwatches();
+    }
+}
+
+function autoActivateTimerBasedOnDocument(textDocument: vscode.TextDocument)
+{
+    if(vscode.workspace.getConfiguration().get("sessiontracker.stopwatch_behavior.autostarttimer"))
+    {
+        if(isTextDocumentAssociatedWithStopwatch(textDocument))
+        {
+            autoActivateTimer();
+        }
+    }
+}
+
+function autoActivateTimerBasedOnDocument_ActionName(actionName: string): (textDocument: vscode.TextDocument) => void
+{
+    return (textDocument: vscode.TextDocument) => {
+        let enabledActions: string[] = vscode.workspace.getConfiguration().get("sessiontracker.stopwatch_behaviro.autostarttimer_actions");
+        if(enabledActions.indexOf(actionName) !== -1)
+        {
+            autoActivateTimerBasedOnDocument(textDocument);
+        }
+    };
+}
+
+const AUTOACTIVATE_ACTIONFUNC_OpenTextDocument = autoActivateTimerBasedOnDocument_ActionName("OpenTextDocument");
+const AUTOACTIVATE_ACTIONFUNC_ChangeTextDocument = autoActivateTimerBasedOnDocument_ActionName("ChangeTextDocument");
+const AUTOACTIVATE_ACTIONFUNC_CloseTextDocument = autoActivateTimerBasedOnDocument_ActionName("CloseTextDocument");
+const AUTOACTIVATE_ACTIONFUNC_SaveTextDocument = autoActivateTimerBasedOnDocument_ActionName("SaveTextDocument");
+const AUTOACTIVATE_ACTIONFUNC_ChangedTextEditorSelection = autoActivateTimerBasedOnDocument_ActionName("ChangedTextEditorSelection");
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
 
+    context.subscriptions.push(vscode.workspace.onDidChangeConfiguration((e) => {
+        if(e.affectsConfiguration("sessiontracker.stopwatch_statusbar.showfolderworktime"))
+        {
+            updateTimeAmountStatusItem();
+        }
+        if(e.affectsConfiguration("sessiontracker.stopwatch_statusbar.showtrackingtimeitem"))
+        {
+            updateTimerStateStatusBarText();
+        }
+    }));
+
+    //
     extensionPath = context.extensionPath;
-    console.log(path.resolve(session_filename));
-    // Use the console to output diagnostic information (console.log) and errors (console.error)
-    // This line of code will only be executed once when your extension is activated
-    console.log('Congratulations, your extension "session-tracker" is now active!');
 
     try
     {
@@ -125,13 +254,18 @@ export function activate(context: vscode.ExtensionContext) {
     timerStateStatusBar.command = "sessiontracker.toggleStopwatches";
     timerStateStatusBar.show();
 
-    context.subscriptions.push(timerStateStatusBar);
+    timeAmountStatusItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 101);
+    timeAmountStatusItem.command = "sessiontracker.showTrackedTimes";
 
-    const configuration = vscode.workspace.getConfiguration();
+    timeAmountUpdateHandle = setInterval(updateTimeAmountStatusItem, 1000);
+
+    context.subscriptions.push(timerStateStatusBar);
+    context.subscriptions.push(timeAmountStatusItem);
+
     let currentPanel: vscode.WebviewPanel | undefined = undefined;
 
-    vscode.window.onDidChangeWindowState((event) => {
-        if(configuration.get<boolean>("sessiontracker.stopwatch.changebasedonfocus"))
+    context.subscriptions.push(vscode.window.onDidChangeWindowState((event) => {
+        if(vscode.workspace.getConfiguration().get<boolean>("sessiontracker.stopwatch_behavior.changebasedonfocus"))
         {
             if(event.focused)
             {
@@ -149,9 +283,9 @@ export function activate(context: vscode.ExtensionContext) {
                 resumeStopwatches();
             }
         }
-    })
+    }));
 
-    vscode.workspace.onDidChangeWorkspaceFolders((event) => {
+    context.subscriptions.push(vscode.workspace.onDidChangeWorkspaceFolders((event) => {
         console.log(event);
         if(event.added.length > 0)
         {
@@ -167,17 +301,38 @@ export function activate(context: vscode.ExtensionContext) {
                 endStopwatch(index);
             })
         }
-    });
+    }));
 
     vscode.workspace.workspaceFolders.forEach((folder) => {
         const index = folder.uri.toString();
         startStopwatch(index);
     });
 
-    // The command has been defined in the package.json file
-    // Now provide the implementation of the command with  registerCommand
-    // The commandId parameter must match the command field in package.json
-    let disposable = vscode.commands.registerCommand('sessiontracker.showTrackedTimes', () => {
+    context.subscriptions.push(vscode.window.onDidChangeActiveTextEditor((editor) => {
+        if(editor !== undefined)
+        {
+            let workspaceFolder = vscode.workspace.getWorkspaceFolder(editor.document.uri);
+            if(workspaceFolder === undefined)
+            {
+                workspaceFolder = vscode.workspace.workspaceFolders[0];
+            }
+
+            lastActiveWorkspaceFolder = workspaceFolder;
+        }
+        else
+        {
+            lastActiveWorkspaceFolder = vscode.workspace.workspaceFolders[0];
+        }
+        autoActivateTimer();
+    }));
+
+    context.subscriptions.push(vscode.workspace.onDidOpenTextDocument(AUTOACTIVATE_ACTIONFUNC_OpenTextDocument));
+    context.subscriptions.push(vscode.workspace.onDidChangeTextDocument((e) => AUTOACTIVATE_ACTIONFUNC_ChangeTextDocument(e.document)));
+    context.subscriptions.push(vscode.workspace.onDidCloseTextDocument(AUTOACTIVATE_ACTIONFUNC_CloseTextDocument));
+    context.subscriptions.push(vscode.workspace.onDidSaveTextDocument(AUTOACTIVATE_ACTIONFUNC_SaveTextDocument));
+    context.subscriptions.push(vscode.window.onDidChangeTextEditorSelection((e) => AUTOACTIVATE_ACTIONFUNC_ChangedTextEditorSelection(e.textEditor.document)));
+
+    context.subscriptions.push(vscode.commands.registerCommand('sessiontracker.showTrackedTimes', () => {
         const columnToShowIn = vscode.window.activeTextEditor ? vscode.window.activeTextEditor.viewColumn : undefined;
 
         // Display a message box to the user
@@ -229,9 +384,7 @@ export function activate(context: vscode.ExtensionContext) {
                 currentPanel = undefined;
             }, null, context.subscriptions);
         }
-    });
-
-    context.subscriptions.push(disposable);
+    }));
 
     context.subscriptions.push(vscode.commands.registerCommand('sessiontracker.toggleStopwatches', () => {
         if(paused)
@@ -246,7 +399,12 @@ export function activate(context: vscode.ExtensionContext) {
         }
     }));
 
-    updateStatusBarText();
+    lastActiveWorkspaceFolder = vscode.workspace.workspaceFolders[0];
+
+    updateTimerStateStatusBarText();
+    updateTimeAmountStatusItem();
+
+    console.log('Congratulations, your extension "session-tracker" is now active!');
 }
 
 function getSessionTrackerDataViewHtml(): string
@@ -256,6 +414,8 @@ function getSessionTrackerDataViewHtml(): string
 
 // this method is called when your extension is deactivated
 export function deactivate() {
+    clearInterval(timeAmountUpdateHandle);
+
     Object.keys(stopwatches).forEach(key => {
         endStopwatch(key);
     });

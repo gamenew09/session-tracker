@@ -2,7 +2,7 @@
     "name": "session-tracker",
     "displayName": "Session Tracker",
     "description": "Tracks how much time you have spent on a specific folder.",
-    "version": "0.1.1",
+    "version": "0.2.0",
     "publisher": "gamenew09",
     "engines": {
         "vscode": "^1.33.0"
@@ -28,12 +28,61 @@
         "configuration":[
             {
                 "type": "object",
-                "title": "Stopwatch Behavior",
+                "title": "Session Tracker: Stopwatch Behavior",
                 "properties": {
-                    "sessiontracker.stopwatch.changebasedonfocus": {
+                    "sessiontracker.stopwatch_behavior.changebasedonfocus": {
                         "type": "boolean",
                         "default": false,
                         "description": "Pause the stopwatch if the workspace window is not focused."
+                    },
+                    "sessiontracker.stopwatch_behavior.autostarttimer": {
+                        "type": "boolean",
+                        "default": true,
+                        "description": "Auto start the timer if there is some sort of action in the window."
+                    },
+                    "sessiontracker.stopwatch_behaviro.autostarttimer_actions": {
+                        "type": "array",
+                        "default": [
+                            "OpenTextDocument",
+                            "ChangeTextDocument",
+                            "CloseTextDocument",
+                            "SaveTextDocument",
+                            "ChangedTextEditorSelection"
+                        ],
+                        "description": "These are the actions that will auto start the timer, if the auto-start feature is enabled.",
+                        "items": {
+                            "type": "string",
+                            "enum": [
+                                "OpenTextDocument",
+                                "ChangeTextDocument",
+                                "CloseTextDocument",
+                                "SaveTextDocument",
+                                "ChangedTextEditorSelection"
+                            ],
+                            "enumDescriptions": [
+                                "Start the stopwatches when you open a text document.",
+                                "Start the stopwatches when you edit (add/remove a text character) a text document.",
+                                "Start the stopwatches when you close a text document.",
+                                "Start the stopwatches when you save a text document.",
+                                "Start the stopwatches when you select a new part in a text document."
+                            ]
+                        }
+                    }
+                }
+            },
+            {
+                "type": "object",
+                "title": "Session Tracker: Status Bar",
+                "properties": {
+                    "sessiontracker.stopwatch_statusbar.showfolderworktime": {
+                        "type": "boolean",
+                        "default": true,
+                        "description": "Show the current folder's session time. Depends on the current file selected, if you have opened multiple folders in a workspace."
+                    },
+                    "sessiontracker.stopwatch_statusbar.showtrackingtimeitem": {
+                        "type": "boolean",
+                        "default": true,
+                        "description": "Show the \"Tracking Time\" status bar item. The status bar item is also a quicker way to toggle the stopwatch for all folders opened."
                     }
                 }
             }
