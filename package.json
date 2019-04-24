@@ -2,7 +2,7 @@
     "name": "session-tracker",
     "displayName": "Session Tracker",
     "description": "Tracks how much time you have spent on a specific folder.",
-    "version": "0.2.0",
+    "version": "0.2.1",
     "publisher": "gamenew09",
     "engines": {
         "vscode": "^1.33.0"
