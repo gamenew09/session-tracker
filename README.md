@@ -1,9 +1,5 @@
 # session-tracker README
 
-This is the README for your extension "session-tracker". After writing up a brief description, we recommend including the following sections.
-
-## Features
-
 Tracks how long folders have been opened. Should work with workspaces.
 
 ## Extension Settings
