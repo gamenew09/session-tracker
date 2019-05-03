@@ -2,7 +2,7 @@
     "name": "session-tracker",
     "displayName": "Session Tracker",
     "description": "Tracks how much time you have spent on a specific folder.",
-    "version": "0.2.1",
+    "version": "0.3.0",
     "publisher": "gamenew09",
     "engines": {
         "vscode": "^1.33.0"
@@ -40,7 +40,7 @@
                         "default": true,
                         "description": "Auto start the timer if there is some sort of action in the window."
                     },
-                    "sessiontracker.stopwatch_behaviro.autostarttimer_actions": {
+                    "sessiontracker.stopwatch_behavior.autostarttimer_actions": {
                         "type": "array",
                         "default": [
                             "OpenTextDocument",
@@ -83,6 +83,17 @@
                         "type": "boolean",
                         "default": true,
                         "description": "Show the \"Tracking Time\" status bar item. The status bar item is also a quicker way to toggle the stopwatch for all folders opened."
+                    }
+                }
+            },
+            {
+                "type": "object",
+                "title": "Session Tracker: Unopened Folder Behavior",
+                "properties": {
+                    "sessiontracker.unopened_folder_behavior.showWarningOnExtensionStart": {
+                        "type": "boolean",
+                        "default": true,
+                        "description": "Show a warning stating that time is not being tracked but you can still see times that were tracked."
                     }
                 }
             }

@@ -23,10 +23,12 @@ let stopwatches: StopwatchMap = {};
 let paused: boolean = false;
 let timerStateStatusBar: vscode.StatusBarItem;
 
+let lastActiveWorkspaceFolder: vscode.WorkspaceFolder;
+
 function updateTimerStateStatusBarText()
 {
     timerStateStatusBar.text = paused ? "Not Tracking Time" : "Tracking Time";
-    if(vscode.workspace.getConfiguration().get<boolean>("sessiontracker.stopwatch_statusbar.showtrackingtimeitem"))
+    if(vscode.workspace.getConfiguration().get<boolean>("sessiontracker.stopwatch_statusbar.showtrackingtimeitem") && lastActiveWorkspaceFolder !== undefined)
     {
         timerStateStatusBar.show();
     }
@@ -53,12 +55,19 @@ function resumeStopwatches()
 {
     if(paused)
     {
-        paused = false;
-        Object.keys(stopwatches).forEach(key => {
-            stopwatches[key].start();
-        });
-        console.log("Started stopwatches");
-        updateTimerStateStatusBarText();
+        if(vscode.workspace.workspaceFolders === undefined)
+        {
+            vscode.window.showErrorMessage("You must open a folder before you can track time.");
+        }
+        else
+        {
+            paused = false;
+            Object.keys(stopwatches).forEach(key => {
+                stopwatches[key].start();
+            });
+            console.log("Started stopwatches");
+            updateTimerStateStatusBarText();
+        }
     }
 }
 
@@ -154,7 +163,6 @@ function msToDisplayTime(duration: number): string {
     return days_str + ((days_str === "") ? "" : ":") + hours_str + ":" + minutes_str + ":" + seconds_str;
 }
 
-let lastActiveWorkspaceFolder: vscode.WorkspaceFolder;
 let showTimeAmount: boolean = true;
 
 function updateTimeAmountStatusItem()
@@ -211,7 +219,7 @@ function autoActivateTimerBasedOnDocument(textDocument: vscode.TextDocument)
 function autoActivateTimerBasedOnDocument_ActionName(actionName: string): (textDocument: vscode.TextDocument) => void
 {
     return (textDocument: vscode.TextDocument) => {
-        let enabledActions: string[] = vscode.workspace.getConfiguration().get("sessiontracker.stopwatch_behaviro.autostarttimer_actions");
+        let enabledActions: string[] = vscode.workspace.getConfiguration().get("sessiontracker.stopwatch_behavior.autostarttimer_actions");
         if(enabledActions.indexOf(actionName) !== -1)
         {
             autoActivateTimerBasedOnDocument(textDocument);
@@ -296,7 +304,9 @@ export function activate(context: vscode.ExtensionContext) {
         }
     }));
 
-    vscode.workspace.workspaceFolders.forEach((folder) => {
+    const workspaceFolders: vscode.WorkspaceFolder[] = vscode.workspace.workspaceFolders === undefined ? [] : vscode.workspace.workspaceFolders;
+
+    workspaceFolders.forEach((folder) => {
         const index = folder.uri.toString();
         startStopwatch(index);
     });
@@ -327,8 +337,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(vscode.commands.registerCommand('sessiontracker.showTrackedTimes', () => {
         const columnToShowIn = vscode.window.activeTextEditor ? vscode.window.activeTextEditor.viewColumn : undefined;
-
-        // Display a message box to the user
+        
         if(currentPanel)
         {
             currentPanel.reveal(columnToShowIn);
@@ -394,7 +403,21 @@ export function activate(context: vscode.ExtensionContext) {
         }
     }));
 
-    lastActiveWorkspaceFolder = vscode.workspace.workspaceFolders[0];
+    lastActiveWorkspaceFolder = workspaceFolders[0];
+
+    if(workspaceFolders[0] === undefined)
+    {
+        paused = true;
+        if(vscode.workspace.getConfiguration().get<boolean>("sessiontracker.unopened_folder_behavior.showWarningOnExtensionStart"))
+        {
+            vscode.window.showWarningMessage("A folder is not currently opened, will not be tracking time. You are still able to look at times.", "Show Tracked Times").then((item) => {
+                if(item === "Show Tracked Times")
+                {
+                    return vscode.commands.executeCommand("sessiontracker.showTrackedTimes");
+                }
+            });
+        }
+    }
 
     updateTimerStateStatusBarText();
     updateTimeAmountStatusItem();
