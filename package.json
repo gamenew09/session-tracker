@@ -2,7 +2,7 @@
     "name": "session-tracker",
     "displayName": "Session Tracker",
     "description": "Tracks how much time you have spent on a specific folder.",
-    "version": "0.3.0",
+    "version": "0.4.0",
     "publisher": "gamenew09",
     "engines": {
         "vscode": "^1.33.0"
@@ -27,6 +27,10 @@
             {
                 "command": "sessiontracker.toggleStopwatches",
                 "title": "Session Tracker: Toggle Tracking Times"
+            },
+            {
+                "command": "sessiontracker.showProjectDetails",
+                "title": "Session Tracker: Show Project Details"
             }
         ],
         "configuration":[

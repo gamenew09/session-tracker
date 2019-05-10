@@ -26,6 +26,16 @@ This extension contributes the following settings:
 
 Users appreciate release notes as you update your extension.
 
+## 0.4.0
+ - Individual session times and start times now save in the json file.
+    - There is still the total_time in the json which will always be more accurate than iterating through session_times for getting the total time of a project.
+ - Added new command, `Show Project Details` (`sessiontracker.showProjectDetails`), to show project details. These project details include:
+    - Display name
+    - Dev Name (uri)
+    - Total Time
+    - Individual Session Times)
+ - Updated web views to open up in the currently active side instead of the left side.
+
 ### 0.3.0
 
 Version where git repository was made public.

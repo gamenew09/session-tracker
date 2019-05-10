@@ -1,4 +1,14 @@
 # Change Log
+## 0.4.0
+ - Individual session times and start times now save in the json file.
+    - There is still the total_time in the json which will always be more accurate than iterating through session_times for getting the total time of a project.
+ - Added new command, `Show Project Details` (`sessiontracker.showProjectDetails`), to show project details. These project details include:
+    - Display name
+    - Dev Name (uri)
+    - Total Time
+    - Individual Session Times)
+ - Updated web views to open up in the currently active side instead of the left side.
+
 ## 0.1.x - 0.3.0
 All of the changes from 0.1.x to 0.3.0. In the future, there will be per version changes.
 

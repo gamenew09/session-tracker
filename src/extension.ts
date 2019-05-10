@@ -10,20 +10,36 @@ interface StopwatchMap{
     [folder: string]: Stopwatch;
 }
 
+interface ProjectDetailsMap {
+    [projectName: string]: {
+        webviewPanel: vscode.WebviewPanel,
+        project: FolderSessionTrack
+    };
+}
+
+interface SessionTimes {
+    session_length: number;
+    start_timestamp: number;
+}
+
 interface FolderSessionTrack {
     total_time: number;
     display_name: string;
+    session_times: SessionTimes[];
 }
 
 interface JsonEditable {
     [name: string]: FolderSessionTrack | undefined;
 }
 
+let projectDetailWebViews: ProjectDetailsMap = {};
 let stopwatches: StopwatchMap = {};
 let paused: boolean = false;
 let timerStateStatusBar: vscode.StatusBarItem;
 
 let lastActiveWorkspaceFolder: vscode.WorkspaceFolder;
+
+let startTimestamp: number = 0;
 
 function updateTimerStateStatusBarText()
 {
@@ -88,12 +104,22 @@ function saveFolderTime(name: string): void
         {
             lastLoadedJson[name] = {
                 display_name: vscode.workspace.getWorkspaceFolder(vscode.Uri.parse(name)).name,
-                total_time: 0
+                total_time: 0,
+                session_times: []
             };
         }
+        let previousSessionTimes = (lastLoadedJson[name].session_times === undefined ? [] : lastLoadedJson[name].session_times);
+        
+        let sessionTime = stopwatches[name].getTime();
+        previousSessionTimes.push({
+            session_length: sessionTime,
+            start_timestamp: startTimestamp
+        });
+        
         lastLoadedJson[name] = {
             display_name: vscode.workspace.getWorkspaceFolder(vscode.Uri.parse(name)).name,
-            total_time: lastLoadedJson[name].total_time + stopwatches[name].getTime()
+            total_time: lastLoadedJson[name].total_time + sessionTime,
+            session_times: previousSessionTimes
         };
 
         fs.writeFileSync(session_filename, JSON.stringify(lastLoadedJson), "utf8");
@@ -236,6 +262,7 @@ const AUTOACTIVATE_ACTIONFUNC_ChangedTextEditorSelection = autoActivateTimerBase
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
+    startTimestamp = Date.now();
 
     context.subscriptions.push(vscode.workspace.onDidChangeConfiguration((e) => {
         if(e.affectsConfiguration("sessiontracker.stopwatch_statusbar.showfolderworktime"))
@@ -344,7 +371,7 @@ export function activate(context: vscode.ExtensionContext) {
         }
         else
         {
-            currentPanel = vscode.window.createWebviewPanel("sessionTrackerDataView", "Session Tracker Times", vscode.ViewColumn.One, {
+            currentPanel = vscode.window.createWebviewPanel("sessionTrackerDataView", "Session Tracker Times", vscode.ViewColumn.Active, {
                 enableScripts: true,
                 enableFindWidget: true
             });
@@ -418,6 +445,72 @@ export function activate(context: vscode.ExtensionContext) {
             });
         }
     }
+    
+    context.subscriptions.push(vscode.commands.registerCommand("sessiontracker.showProjectDetails", () => {
+        let firstSelected = true;
+        vscode.window.showQuickPick(Object.keys(lastLoadedJson).map<vscode.QuickPickItem>((projectName) => {
+            if(typeof lastLoadedJson[projectName] === 'object')
+            {
+                let selected = false;
+                if(firstSelected && stopwatches[projectName] !== undefined)
+                {
+                    selected = true;
+                    firstSelected = false;
+                }
+                return {
+                    label: (lastLoadedJson[projectName] as FolderSessionTrack).display_name,
+                    detail: projectName,
+                    description: stopwatches[projectName] !== undefined ? "active" : "",
+                    picked: selected
+                }
+            }
+            else
+            {
+                return undefined;
+            }
+        }), {
+            canPickMany: false,
+            matchOnDescription: true,
+            placeHolder: "Select project to get more details (session times and total time)"
+        }).then((item) => {
+            if(item !== undefined)
+            {
+                let projectName = item.detail;
+                if(typeof lastLoadedJson[projectName] === 'object')
+                {
+                    let project: FolderSessionTrack = (lastLoadedJson[projectName] as FolderSessionTrack);
+                    
+                    let projectDetailsWebView = vscode.window.createWebviewPanel("sessionTrackerProjectDetailsWebView", project.display_name + " - Project Session Times", vscode.ViewColumn.Active, {
+                        enableScripts: true
+                    });
+                    projectDetailsWebView.webview.html = getProjectDetailsHTML(projectName, project);
+
+                    projectDetailWebViews[projectName] = {
+                        webviewPanel: projectDetailsWebView,
+                        project: project
+                    };
+
+                    const updateProjectDetailsFunc = () => {
+                        projectDetailsWebView.webview.postMessage({
+                            type: "update",
+                            current_session_length: stopwatches[projectName].getTime(),
+                            total_time: (lastLoadedJson[projectName] === undefined ? 0 : lastLoadedJson[projectName].total_time) + stopwatches[projectName].getTime()
+                        });
+                    };
+                    const updateProjectDetails: NodeJS.Timer = (stopwatches[projectName] !== undefined) ? setInterval(updateProjectDetailsFunc, 1000) : undefined;
+
+                    projectDetailsWebView.onDidDispose(() => {
+                        if(updateProjectDetails !== undefined)
+                        {
+                            clearInterval(updateProjectDetails);
+                        }
+
+                        projectDetailWebViews[projectName] = undefined;
+                    }, null, context.subscriptions);
+                }
+            }
+        });
+    }));
 
     updateTimerStateStatusBarText();
     updateTimeAmountStatusItem();
@@ -428,6 +521,45 @@ export function activate(context: vscode.ExtensionContext) {
 function getSessionTrackerDataViewHtml(): string
 {
     return fs.readFileSync(path.normalize(extensionPath + "/html/session-tracker-data.html"), "utf8");
+}
+
+function getProjectDetailsHTML(devname: string, project: FolderSessionTrack): string
+{
+    let html = fs.readFileSync(path.normalize(extensionPath + "/html/project-details.html"), "utf8");
+
+    html = html.replace("{{display_name}}", project.display_name).replace("{{dev_name}}", devname).replace("{{total_time}}", msToDisplayTime(project.total_time));
+
+    let rowHtml = "";
+
+    if(project.session_times !== undefined && project.session_times.length > 0)
+    {
+        project.session_times.forEach((time) => {
+            rowHtml = rowHtml.concat(`<tr>
+                <td>${new Date(time.start_timestamp).toLocaleString()}</td>
+                <td>${msToDisplayTime(time.session_length)}</td>
+            </tr>
+            `);
+        });
+    }
+    else if(stopwatches[devname] === undefined)
+    {
+        rowHtml = `<tr>
+        <td colspan="2">There are no session times yet.</td>
+    </tr>`;
+    }
+
+    if(stopwatches[devname] !== undefined)
+    {
+        rowHtml = `<tr id="current-session-row">
+        <td id="current-session-starttimestamp">${new Date(startTimestamp).toLocaleString()}</td>
+        <td id="current-session-length">${msToDisplayTime(stopwatches[devname].getTime())}</td>
+    </tr>
+    ` + rowHtml;
+    }
+
+    html = html.replace("{{table_append}}", rowHtml);
+
+    return html;
 }
 
 // this method is called when your extension is deactivated
