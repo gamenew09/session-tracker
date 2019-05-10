@@ -38,7 +38,7 @@ Users appreciate release notes as you update your extension.
     - Display name
     - Dev Name (uri)
     - Total Time
-    - Individual Session Times)
+    - Individual Session Times
  - Updated web views to open up in the currently active side instead of the left side.
 
 ### 0.3.0
