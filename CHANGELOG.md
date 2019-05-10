@@ -1,4 +1,9 @@
 # Change Log
+## 0.5.0
+ - Cleaned up and abstracted some extension code to make it easier to read and edit. There could be bugs from reorganizing/rewriting the code, so please do report them if you see any.
+ - Updated the command `sessiontracker.showTrackedTimes` to `sessiontracker.showAllTrackedTimes` and changed the label of the command from `Session Tracker: Show Session Tracker Times` to `Session Tracker: Show All Tracked Times`.
+ - The picker when you run `sessiontracker.showProjectDetails`, now allows you to search based on the label, description (which is considered the `active` text), and detail (the uri or devname of the project) shown instead of just the label and description.
+
 ## 0.4.0
  - Individual session times and start times now save in the json file.
     - There is still the total_time in the json which will always be more accurate than iterating through session_times for getting the total time of a project.
